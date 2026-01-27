@@ -4,6 +4,25 @@ from typing import List, Optional, Tuple
 
 from injector import inject
 
+# Security-sensitive functions that can be used for dynamic attribute access bypasses
+DANGEROUS_BUILTINS = [
+    "getattr",
+    "setattr",
+    "delattr",
+    "vars",
+    "globals",
+    "locals",
+    "__getattribute__",
+    "__setattr__",
+    "__delattr__",
+    "__dict__",
+    "__class__",
+    "__bases__",
+    "__subclasses__",
+    "__mro__",
+    "__builtins__",
+]
+
 
 class FunctionCallValidator(ast.NodeVisitor):
     @inject
@@ -45,18 +64,48 @@ class FunctionCallValidator(ast.NodeVisitor):
         if self.allowed_functions is None and self.blocked_functions is None:
             return
 
+        function_name = None
         if isinstance(node.func, ast.Name):
             function_name = node.func.id
         elif isinstance(node.func, ast.Attribute):
             function_name = node.func.attr
+        elif isinstance(node.func, ast.Subscript):
+            # Block subscript-based function calls like obj["method"]()
+            # This is a potential security bypass pattern
+            self.errors.append(
+                f"Error on line {node.lineno}: {self.lines[node.lineno - 1]} "
+                f"=> Subscript-based function calls are not allowed for security reasons.",
+            )
+            self.generic_visit(node)
+            return
+        elif isinstance(node.func, ast.Call):
+            # Block chained calls that might be used for dynamic resolution
+            # e.g., getattr(obj, 'method')()
+            self.generic_visit(node)
+            return
         else:
-            raise ValueError(f"Unsupported function call: {node.func}")
+            # Block any other unrecognized call patterns for security
+            self.errors.append(
+                f"Error on line {node.lineno}: {self.lines[node.lineno - 1]} "
+                f"=> Unrecognized function call pattern is not allowed for security reasons.",
+            )
+            self.generic_visit(node)
+            return
 
-        if not self._is_allowed_function_call(function_name):
+        if function_name and not self._is_allowed_function_call(function_name):
             self.errors.append(
                 f"Error on line {node.lineno}: {self.lines[node.lineno - 1]} "
                 f"=> Function '{function_name}' is not allowed.",
             )
+
+        # Check for dynamic attribute access functions that can bypass security
+        if function_name in DANGEROUS_BUILTINS:
+            self.errors.append(
+                f"Error on line {node.lineno}: {self.lines[node.lineno - 1]} "
+                f"=> Function '{function_name}' is blocked as it can be used to bypass security checks.",
+            )
+
+        self.generic_visit(node)
 
     def _is_allowed_module_import(self, mod_name: str) -> bool:
         if self.allowed_modules is not None:
@@ -125,6 +174,36 @@ class FunctionCallValidator(ast.NodeVisitor):
                         f"Error on line {node.lineno}: {self.lines[node.lineno - 1]} "
                         f"=> Assigning to {variable_name} is not allowed.",
                     )
+
+    def visit_Subscript(self, node: ast.Subscript):
+        """Check for dictionary-based attribute access that could bypass security.
+
+        Patterns like obj.__dict__["method"] or obj["__class__"] can be used
+        to bypass attribute-based security checks.
+        """
+        # Check if the subscript key is a dangerous dunder attribute
+        if isinstance(node.slice, ast.Constant) and isinstance(node.slice.value, str):
+            key_value = node.slice.value
+            if key_value in DANGEROUS_BUILTINS or key_value.startswith("__"):
+                self.errors.append(
+                    f"Error on line {node.lineno}: {self.lines[node.lineno - 1]} "
+                    f"=> Subscript access to '{key_value}' is blocked for security reasons.",
+                )
+        self.generic_visit(node)
+
+    def visit_Attribute(self, node: ast.Attribute):
+        """Check for dangerous attribute access patterns.
+
+        Direct access to dunder attributes like __class__, __dict__, etc.
+        can be used to bypass security measures.
+        """
+        attr_name = node.attr
+        if attr_name in DANGEROUS_BUILTINS:
+            self.errors.append(
+                f"Error on line {node.lineno}: {self.lines[node.lineno - 1]} "
+                f"=> Attribute access to '{attr_name}' is blocked for security reasons.",
+            )
+        self.generic_visit(node)
 
     def generic_visit(self, node):
         super().generic_visit(node)
