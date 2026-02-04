@@ -96,7 +96,7 @@ class Planner(Role):
                 config=compactor_config,
                 llm_api=llm_api,
                 rounds_getter=lambda: [],
-                logger=lambda msg: self.logger.debug(msg),
+                logger=lambda msg: self.logger.info(msg),
                 llm_alias=self.config.compaction_llm_alias,
             )
 
@@ -140,7 +140,7 @@ class Planner(Role):
                 if summary is not None:
                     self.logger.debug(f"Summary: {summary}")
                     summary_message = (
-                        f"\nThe context summary of the Planner's previous rounds" f" can refer to:\n{summary}\n\n"
+                        f"\nThe context summary of the previous conversation rounds" f" can refer to:\n{summary}\n\n"
                     )
                     conv_init_message += "\n" + summary_message
 

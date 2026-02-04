@@ -98,7 +98,7 @@ class CodeGenerator(Role):
                 config=compactor_config,
                 llm_api=llm_api,
                 rounds_getter=lambda: [],
-                logger=lambda msg: self.logger.debug(msg),
+                logger=lambda msg: self.logger.info(msg),
                 llm_alias=self.config.compaction_llm_alias,
             )
 

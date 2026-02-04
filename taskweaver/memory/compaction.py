@@ -41,6 +41,8 @@ class CompactedMessage:
 class CompactionProvider(Protocol):
     """Interface that compactors implement for Memory integration."""
 
+    rounds_getter: Callable[[], List["Round"]]
+
     def get_compaction(self) -> Optional[CompactedMessage]:
         """Returns current compaction if available."""
         ...

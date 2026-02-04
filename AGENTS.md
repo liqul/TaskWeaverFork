@@ -1,6 +1,6 @@
 # AGENTS.md - TaskWeaver Development Guide
 
-**Generated:** 2026-01-27 | **Commit:** 10c90d1 | **Branch:** liqun/add_variables_to_code_generator
+**Generated:** 2026-02-03 | **Commit:** e66905c | **Branch:** experimental
 
 This document provides guidance for AI coding agents working on the TaskWeaver codebase.
 
@@ -10,6 +10,9 @@ This document provides guidance for AI coding agents working on the TaskWeaver c
 - [`taskweaver/code_interpreter/AGENTS.md`](taskweaver/code_interpreter/AGENTS.md) - Code interpreter role variants
 - [`taskweaver/memory/AGENTS.md`](taskweaver/memory/AGENTS.md) - Memory data model (Post/Round/Conversation)
 - [`taskweaver/ext_role/AGENTS.md`](taskweaver/ext_role/AGENTS.md) - Extended role definitions
+- [`taskweaver/planner/AGENTS.md`](taskweaver/planner/AGENTS.md) - Planner role (task decomposition)
+- [`taskweaver/plugin/AGENTS.md`](taskweaver/plugin/AGENTS.md) - Plugin base classes and registry
+- [`taskweaver/role/AGENTS.md`](taskweaver/role/AGENTS.md) - Role base classes and registry
 
 ## Project Overview
 
