@@ -164,7 +164,8 @@ Connect to pre-started server. API key required.
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | GET | `/api/v1/health` | Health check |
-| POST | `/api/v1/sessions` | Create session |
+| GET | `/api/v1/sessions` | List all active sessions |
+| POST | `/api/v1/sessions` | Create session (auto-generates ID if not provided) |
 | DELETE | `/api/v1/sessions/{id}` | Stop session |
 | GET | `/api/v1/sessions/{id}` | Get session info |
 | POST | `/api/v1/sessions/{id}/plugins` | Load plugin |
@@ -172,7 +173,7 @@ Connect to pre-started server. API key required.
 | GET | `/api/v1/sessions/{id}/stream/{exec_id}` | SSE stream |
 | POST | `/api/v1/sessions/{id}/variables` | Update variables |
 | POST | `/api/v1/sessions/{id}/files` | Upload file to session cwd |
-| GET | `/api/v1/sessions/{id}/artifacts/{file}` | Download artifact |
+| GET | `/api/v1/sessions/{id}/artifacts/{file}` | Download artifact (falls back to chat sessions) |
 
 ## Usage
 
@@ -454,3 +455,48 @@ When `server_container=true`:
 - Port mapping: `8000/tcp` → host port
 - Volume: `{env_dir}` → `/app/workspace`
 - Server runs inside container with local kernel
+
+## Web UI Integration
+
+The CES server integrates with the Chat Web UI when started via CLI:
+
+### Mounting the Chat Router
+
+In `server/app.py`, the FastAPI application mounts the chat router:
+```python
+from taskweaver.chat.web import chat_router, chat_manager
+
+app.include_router(chat_router)
+chat_manager.set_app_dir(app_dir)  # Configure TaskWeaver project path
+```
+
+### Artifact Fallback
+
+The artifact download endpoint (`GET /sessions/{id}/artifacts/{file}`) falls back to chat sessions when a CES session is not found:
+
+```python
+# In routes.py download_artifact()
+if session_manager.session_exists(session_id):
+    artifact_path = session_manager.get_artifact_path(session_id, file_name)
+else:
+    # Fallback: check chat sessions for artifacts
+    from taskweaver.chat.web.routes import chat_manager
+    chat_session = chat_manager.get_session(session_id)
+    if chat_session:
+        artifact_path = chat_session.get_artifact_path(file_name)
+```
+
+This enables the Web UI to download artifacts generated during chat sessions, even when those sessions are managed by the chat layer rather than directly by CES.
+
+### Session Listing
+
+The `GET /api/v1/sessions` endpoint returns all active CES sessions:
+```python
+@router.get("/sessions", response_model=SessionListResponse)
+async def list_sessions(...) -> SessionListResponse:
+    """List all active sessions with metadata."""
+    sessions = session_manager.list_sessions()
+    return SessionListResponse(sessions=sessions)
+```
+
+See also: [`taskweaver/chat/web/AGENTS.md`](../chat/web/AGENTS.md) for chat-specific documentation.

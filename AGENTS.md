@@ -1,6 +1,6 @@
 # AGENTS.md - TaskWeaver Development Guide
 
-**Generated:** 2026-02-03 | **Commit:** e66905c | **Branch:** experimental
+**Generated:** 2026-02-06 | **Commit:** d124f160 | **Branch:** experimental
 
 This document provides guidance for AI coding agents working on the TaskWeaver codebase.
 
@@ -13,6 +13,7 @@ This document provides guidance for AI coding agents working on the TaskWeaver c
 - [`taskweaver/planner/AGENTS.md`](taskweaver/planner/AGENTS.md) - Planner role (task decomposition)
 - [`taskweaver/plugin/AGENTS.md`](taskweaver/plugin/AGENTS.md) - Plugin base classes and registry
 - [`taskweaver/role/AGENTS.md`](taskweaver/role/AGENTS.md) - Role base classes and registry
+- [`taskweaver/chat/web/AGENTS.md`](taskweaver/chat/web/AGENTS.md) - Chat Web UI (WebSocket + React)
 
 ## Project Overview
 
@@ -72,10 +73,11 @@ flake8 --config=.linters/tox.ini taskweaver/
 # CLI mode
 python -m taskweaver -p ./project/
 
-# Start CES server explicitly
+# Start server with Web UI
 python -m taskweaver -p ./project/ server --port 8000
+# Then open http://localhost:8000/chat in your browser
 
-# In another terminal, connect to running server
+# In another terminal, connect to running server (CLI mode)
 python -m taskweaver -p ./project/ chat --server-url http://localhost:8000
 
 # As a module
@@ -210,6 +212,8 @@ taskweaver/
 ├── app/              # Application entry points and session management
 ├── ces/              # Code execution service (see ces/AGENTS.md)
 ├── chat/             # Chat interfaces (console, web)
+│   ├── console/      # Terminal CLI chat interface
+│   └── web/          # Web UI backend (see chat/web/AGENTS.md)
 ├── cli/              # CLI implementation
 ├── code_interpreter/ # Code generation and interpretation (see code_interpreter/AGENTS.md)
 ├── config/           # Configuration management
@@ -224,6 +228,9 @@ taskweaver/
 ├── role/             # Role base classes
 ├── session/          # Session management
 ├── utils/            # Helper utilities
+├── web/              # Web frontend (React + Vite + TypeScript)
+│   ├── __init__.py   # Frontend mounting and SPA routing
+│   └── frontend/     # React source and build output
 └── workspace/        # Workspace management
 
 tests/
