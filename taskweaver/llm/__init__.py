@@ -4,7 +4,6 @@ from typing import Any, Callable, Generator, List, Optional, Type
 from injector import Injector, Module, inject, provider
 
 from taskweaver.config.config_mgt import AppConfigSource
-from taskweaver.llm.azure_ml import AzureMLService
 from taskweaver.llm.base import (
     CompletionService,
     EmbeddingService,
@@ -12,29 +11,15 @@ from taskweaver.llm.base import (
     LLMModuleConfig,
     LLMServiceConfig,
 )
-from taskweaver.llm.google_genai import GoogleGenAIService
-from taskweaver.llm.groq import GroqService, GroqServiceConfig
 from taskweaver.llm.mock import MockApiService
-from taskweaver.llm.ollama import OllamaService
 from taskweaver.llm.openai import OpenAIService
 from taskweaver.llm.placeholder import PlaceholderEmbeddingService
-from taskweaver.llm.qwen import QWenService, QWenServiceConfig
-from taskweaver.llm.sentence_transformer import SentenceTransformerService
 from taskweaver.llm.util import ChatMessageType, format_chat_message
-from taskweaver.llm.zhipuai import ZhipuAIService
-from taskweaver.llm.anthropic import AnthropicService
 
 llm_completion_config_map = {
     "openai": OpenAIService,
     "azure": OpenAIService,
     "azure_ad": OpenAIService,
-    "azure_ml": AzureMLService,
-    "ollama": OllamaService,
-    "google_genai": GoogleGenAIService,
-    "qwen": QWenService,
-    "zhipuai": ZhipuAIService,
-    "groq": GroqService,
-    "anthropic": AnthropicService,
 }
 
 # TODO
@@ -56,46 +41,14 @@ class LLMApi(object):
 
         if self.config.api_type in ["openai", "azure", "azure_ad"]:
             self._set_completion_service(OpenAIService)
-        elif self.config.api_type == "ollama":
-            self._set_completion_service(OllamaService)
-        elif self.config.api_type == "azure_ml":
-            self._set_completion_service(AzureMLService)
-        elif self.config.api_type == "google_genai":
-            self._set_completion_service(GoogleGenAIService)
-        elif self.config.api_type == "qwen":
-            self._set_completion_service(QWenService)
-        elif self.config.api_type == "zhipuai":
-            self._set_completion_service(ZhipuAIService)
-        elif self.config.api_type == "groq":
-            self._set_completion_service(GroqService)
-        elif self.config.api_type == "anthropic":  # Add support for Anthropic
-            self._set_completion_service(AnthropicService)
         else:
-            raise ValueError(f"API type {self.config.api_type} is not supported")
+            raise ValueError(f"API type {self.config.api_type} is not supported. Supported: openai, azure, azure_ad")
 
         if self.config.embedding_api_type in ["openai", "azure", "azure_ad"]:
             self._set_embedding_service(OpenAIService)
-        elif self.config.embedding_api_type == "ollama":
-            self._set_embedding_service(OllamaService)
-        elif self.config.embedding_api_type == "google_genai":
-            self._set_embedding_service(GoogleGenAIService)
-        elif self.config.embedding_api_type == "sentence_transformers":
-            self._set_embedding_service(SentenceTransformerService)
-        elif self.config.embedding_api_type == "qwen":
-            self._set_embedding_service(QWenService)
-        elif self.config.embedding_api_type == "zhipuai":
-            self._set_embedding_service(ZhipuAIService)
-        elif self.config.embedding_api_type == "azure_ml":
-            self.embedding_service = PlaceholderEmbeddingService(
-                "Azure ML does not support embeddings yet. Please configure a different embedding API.",
-            )
-        elif self.config.embedding_api_type == "groq":
-            self.embedding_service = PlaceholderEmbeddingService(
-                "Groq does not support embeddings yet. Please configure a different embedding API.",
-            )
         else:
             raise ValueError(
-                f"Embedding API type {self.config.embedding_api_type} is not supported",
+                f"Embedding API type {self.config.embedding_api_type} is not supported. Supported: openai, azure, azure_ad",
             )
 
         if self.config.use_mock:

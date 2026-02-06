@@ -1,6 +1,6 @@
 # LLM Module - AGENTS.md
 
-Provider abstraction layer for LLM and embedding services.
+Provider abstraction layer for LLM and embedding services. Supports OpenAI and Azure OpenAI APIs.
 
 ## Structure
 
@@ -8,19 +8,21 @@ Provider abstraction layer for LLM and embedding services.
 llm/
 ├── base.py           # Abstract base: CompletionService, EmbeddingService, LLMModuleConfig
 ├── util.py           # ChatMessageType, format_chat_message, token counting
-├── openai.py         # OpenAI/Azure OpenAI provider (largest file ~430 lines)
-├── anthropic.py      # Anthropic Claude provider
-├── google_genai.py   # Google Generative AI provider
-├── ollama.py         # Ollama local LLM provider
-├── qwen.py           # Alibaba Qwen provider
-├── zhipuai.py        # ZhipuAI provider
-├── groq.py           # Groq provider
-├── azure_ml.py       # Azure ML endpoints
-├── sentence_transformer.py  # Local embedding via sentence_transformers
+├── openai.py         # OpenAI/Azure OpenAI provider (~430 lines)
 ├── mock.py           # Mock provider for testing
-├── placeholder.py    # Placeholder when no LLM configured
+├── placeholder.py    # Placeholder when no embedding configured
 └── __init__.py       # LLMApi facade class
 ```
+
+## Supported Providers
+
+| API Type | Provider | Description |
+|----------|----------|-------------|
+| `openai` | OpenAIService | OpenAI API (GPT-4, GPT-3.5, etc.) |
+| `azure` | OpenAIService | Azure OpenAI Service |
+| `azure_ad` | OpenAIService | Azure OpenAI with Azure AD auth |
+
+All providers use the same `OpenAIService` class since Azure OpenAI uses a compatible API.
 
 ## Key Patterns
 
@@ -47,16 +49,30 @@ ChatMessageType = TypedDict("ChatMessageType", {
 })
 ```
 
-## Adding a New LLM Provider
+## Configuration
 
-1. Create `taskweaver/llm/newprovider.py`
-2. Implement config class extending `LLMServiceConfig`
-3. Implement service class extending `CompletionService`
-4. Add to `_completion_service_map` in `__init__.py`
-5. Document in `llm.api_type` config options
+```json
+{
+  "llm.api_type": "openai",
+  "llm.api_key": "sk-...",
+  "llm.model": "gpt-4",
+  "llm.api_base": "https://api.openai.com/v1"
+}
+```
+
+For Azure OpenAI:
+```json
+{
+  "llm.api_type": "azure",
+  "llm.api_key": "...",
+  "llm.api_base": "https://your-resource.openai.azure.com/",
+  "llm.api_version": "2024-02-01",
+  "llm.model": "your-deployment-name"
+}
+```
 
 ## Common Gotchas
 
 - `response_format` options: `"json_object"`, `"text"`, `"json_schema"`
 - Streaming: All providers return `Generator[ChatMessageType, None, None]`
-- OpenAI file is largest (~430 lines) - handles both OpenAI and Azure OpenAI
+- OpenAI file handles both OpenAI and Azure OpenAI via the same class

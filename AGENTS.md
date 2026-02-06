@@ -246,7 +246,7 @@ tests/
 - **planner/**: Planner role; LLM-powered task decomposition and planning logic.
 - **code_interpreter/**: Code generation and execution (full, CLI-only, plugin-only); code verification/AST checks.
 - **memory/**: Conversation history, rounds, posts, attachments, experiences; RoundCompressor utilities.
-- **llm/**: LLM API facades; providers include OpenAI/Azure, Anthropic, Ollama, Google GenAI, Qwen, ZhipuAI, Groq, Azure ML, mock; embeddings via OpenAI/Azure, Ollama, Google GenAI, sentence_transformers, Qwen, ZhipuAI.
+- **llm/**: LLM API facades; supports OpenAI and Azure OpenAI providers; embeddings via OpenAI/Azure.
 - **plugin/**: Plugin base classes and registry/context for function-style plugins.
 - **role/**: Core role abstractions, RoleRegistry, PostTranslator.
 - **ext_role/**: Extended roles (web_search, web_explorer, image_reader, document_retriever, recepta, echo).
