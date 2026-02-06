@@ -1,5 +1,5 @@
 import { Outlet, NavLink } from 'react-router-dom'
-import { Terminal, Boxes } from 'lucide-react'
+import { Terminal, Boxes, MessageSquare } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 export function Layout() {
@@ -10,10 +10,22 @@ export function Layout() {
           <div className="mr-4 flex">
             <NavLink to="/" className="mr-6 flex items-center space-x-2">
               <Boxes className="h-6 w-6 text-primary" />
-              <span className="font-bold">TaskWeaver CES</span>
+              <span className="font-bold">TaskWeaver</span>
             </NavLink>
           </div>
           <nav className="flex items-center space-x-6 text-sm font-medium">
+            <NavLink
+              to="/chat"
+              className={({ isActive }) =>
+                cn(
+                  'flex items-center gap-2 transition-colors hover:text-foreground/80',
+                  isActive ? 'text-foreground' : 'text-foreground/60'
+                )
+              }
+            >
+              <MessageSquare className="h-4 w-4" />
+              Chat
+            </NavLink>
             <NavLink
               to="/sessions"
               className={({ isActive }) =>

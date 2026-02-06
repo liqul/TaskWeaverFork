@@ -520,10 +520,26 @@ async def download_artifact(
     session_manager: ServerSessionManager = Depends(get_session_manager),
 ) -> FileResponse:
     """Download an artifact file from a session."""
-    if not session_manager.session_exists(session_id):
-        raise HTTPException(status_code=404, detail=f"Session {session_id} not found")
+    artifact_path: Optional[str] = None
 
-    artifact_path = session_manager.get_artifact_path(session_id, filename)
+    if session_manager.session_exists(session_id):
+        artifact_path = session_manager.get_artifact_path(session_id, filename)
+    else:
+        # Fallback: check chat sessions for artifacts
+        try:
+            from taskweaver.chat.web.routes import chat_manager
+
+            chat_session = chat_manager.get_session(session_id)
+            if chat_session:
+                potential_path = os.path.join(chat_session.tw_session.execution_cwd, filename)
+                real_potential_path = os.path.realpath(potential_path)
+                real_cwd = os.path.realpath(chat_session.tw_session.execution_cwd)
+                # Security: ensure path doesn't escape execution directory
+                if real_potential_path.startswith(real_cwd) and os.path.isfile(potential_path):
+                    artifact_path = potential_path
+        except ImportError:
+            pass
+
     if artifact_path is None:
         raise HTTPException(status_code=404, detail=f"Artifact {filename} not found")
 

@@ -61,7 +61,7 @@ class CodeInterpreterConfig(RoleConfig):
         )
 
         self.code_prefix = self._get_str("code_prefix", "")
-        self.require_confirmation = self._get_bool("require_confirmation", False)
+        self.require_confirmation = self._get_bool("require_confirmation", True)
 
 
 def update_verification(

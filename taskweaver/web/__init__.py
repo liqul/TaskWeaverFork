@@ -7,7 +7,8 @@ import os
 from pathlib import Path
 from typing import Optional
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
+from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
 logger = logging.getLogger(__name__)
@@ -43,6 +44,22 @@ def mount_frontend(app: FastAPI, static_dir: Optional[Path] = None) -> bool:
         )
         return False
 
-    app.mount("/", StaticFiles(directory=str(static_dir), html=True), name="frontend")
+    index_html = static_dir / "index.html"
+
+    @app.get("/chat")
+    @app.get("/chat/{path:path}")
+    @app.get("/sessions")
+    @app.get("/sessions/{path:path}")
+    async def spa_fallback(request: Request):
+        return FileResponse(str(index_html))
+
+    assets_dir = static_dir / "assets"
+    if assets_dir.exists():
+        app.mount("/assets", StaticFiles(directory=str(assets_dir)), name="assets")
+    
+    @app.get("/")
+    async def serve_index():
+        return FileResponse(str(index_html))
+
     logger.info(f"Mounted frontend static files from {static_dir}")
     return True
