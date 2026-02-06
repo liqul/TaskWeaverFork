@@ -34,9 +34,10 @@ class LLMModuleConfig(ModuleConfig):
             "api_type",
             "openai",
         )
+        # Default embedding_api_type to match api_type (supports openai, azure, azure_ad)
         self.embedding_api_type = self._get_str(
             "embedding_api_type",
-            "sentence_transformers",
+            self.api_type,
         )
         self.api_base: Optional[str] = self._get_str("api_base", None, required=False)
         self.api_key: Optional[str] = self._get_str(
