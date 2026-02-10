@@ -19,7 +19,7 @@ python script/document_indexer.py \
   --output_path project/sample_data/knowledge_base \
   --extensions md
 ```
-Please take a look at the import section in the script to install the required python packages.
+The script requires `faiss-cpu`, `sentence-transformers`, and `tiktoken`.
 There are two parameters `--chunk_step` and `--chunk_size` that can be specified to control the chunking of the documents.
 The `--chunk_step` is the step size of the sliding window and the `--chunk_size` is the size of the sliding window.
 The default values are `--chunk_step=64` and `--chunk_size=64`.
@@ -31,8 +31,13 @@ by experimenting with different values on your dataset.
 
 The retrieval is based on FAISS. You can find more details about FAISS [here](https://ai.meta.com/tools/faiss/).
 FAISS is a library for vector similarity search of dense vectors.
-In our implementation, we use the wrapper class provided by Langchain to call FAISS.
-The embedding of the documents and the query is based on HuggingFace's Sentence Transformers.
+In our implementation, we use FAISS directly via the `faiss-cpu` package.
+The embedding of the documents and the query is based on HuggingFace's [Sentence Transformers](https://www.sbert.net/).
+
+The required dependencies are:
+```bash
+pip install faiss-cpu sentence-transformers tiktoken
+```
 
 The retrieved document chunks are presented in the following format:
 ```json
