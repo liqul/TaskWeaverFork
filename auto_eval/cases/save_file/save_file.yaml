@@ -5,10 +5,9 @@ config_var:
 app_dir: ../project/
 dependencies: []
 task_description: |-
-  The task has two steps and you should ask the agent one by one:
-  1. ask the agent to save the content 'hello world' to a file named 'hello.txt' and provide the absolute file path.
-  2. ask the agent to read the file based on the provided file path and present the content to you.
-
+  Please complete these two steps:
+  1. Save the content 'hello world' to a file named 'hello.txt' and provide the absolute file path.
+  2. Read the file at that path and show me the content.
 scoring_points:
   - score_point: The provided file path should be a valid absolute path.
     weight: 1

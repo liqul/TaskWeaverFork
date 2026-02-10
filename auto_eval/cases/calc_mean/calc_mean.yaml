@@ -6,9 +6,7 @@ dependencies: ["numpy"]
 data_files:
   - demo_data.csv
 task_description: |-
-  The task is to calculate mean value of ./demo_data.csv.
-  In the initial request, you should not include the column name.
-  But if you are asked to provide the column name, please provide the following column name: 'Count'.
+  Calculate the mean value of ./demo_data.csv. If you need a specific column name, use 'Count'.
 scoring_points:
   - score_point: "The correct mean value is 78172.75"
     weight: 1

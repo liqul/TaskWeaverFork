@@ -14,7 +14,12 @@
       "Bash(\"C:/Users/liqli/AppData/Local/miniconda3/envs/taskweaver/python.exe\" -c \"from taskweaver.code_interpreter.code_interpreter.code_generator import CodeGenerator; print\\(''CodeGenerator Import OK''\\)\")",
       "Bash(\"C:/Users/liqli/AppData/Local/miniconda3/envs/taskweaver/python.exe\" -c \"from taskweaver.code_interpreter.code_interpreter_plugin_only.code_generator_plugin_only import CodeGeneratorPluginOnly; print\\(''PluginOnly Import OK''\\)\")",
       "Bash(\"C:/Users/liqli/AppData/Local/miniconda3/envs/taskweaver/python.exe\" -m pytest tests/unit_tests/test_plugin.py -v)",
-      "Bash(\"C:/Users/liqli/AppData/Local/miniconda3/envs/taskweaver/python.exe\" -m pytest tests/unit_tests/test_code_generator.py -v)"
+      "Bash(\"C:/Users/liqli/AppData/Local/miniconda3/envs/taskweaver/python.exe\" -m pytest tests/unit_tests/test_code_generator.py -v)",
+      "Bash(C:UsersliqliAppDataLocalminiconda3envstaskweaverpython.exe -m pytest tests/unit_tests -v -x)",
+      "Bash(\"C:\\\\Users\\\\liqli\\\\AppData\\\\Local\\\\miniconda3\\\\envs\\\\taskweaver\\\\python.exe\" -m pytest tests/unit_tests -v -x)",
+      "Bash(pip show:*)",
+      "Bash(C:UsersliqliAppDataLocalminiconda3envstaskweaverpython.exe -m pytest tests/unit_tests -v)",
+      "Bash(cmd /c \"conda activate taskweaver && pytest tests/unit_tests -v\")"
     ]
   }
 }

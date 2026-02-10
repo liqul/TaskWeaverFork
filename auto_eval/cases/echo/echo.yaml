@@ -4,13 +4,9 @@ config_var:
 app_dir: ../project/
 dependencies: []
 task_description: |-
-  The task is to echo the word "Hello World"
+  Echo the word "Hello World"
 scoring_points:
-  - score_point: \"Hello World\" should appear in the last agent response
+  - score_point: The agent should echo "Hello World" back to the user
     weight: 1
-    eval_code: |-
-      last_agent_response = chat_history[-1]  # chat_history is a list of dicts with "role" and "content" keys
-      assert last_agent_response.get("role") == "user" and last_agent_response["content"] == "Hello World", f"last agent response: {last_agent_response} is not as expected"
   - score_point: The agent should repeat the word "Hello World" in the response
     weight: 1
-    eval_code: null

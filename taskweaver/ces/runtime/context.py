@@ -131,7 +131,7 @@ class ExecutorPluginContext(PluginContext):
         self.log_messages.append((level, tag, message))
 
     def _get_obj_path(self, name: str) -> str:
-        return os.path.join(self.executor.session_dir, "cwd", name)
+        return os.path.join(self.executor.cwd, name)
 
     def call_llm_api(self, messages: List[Dict[str, str]], **args: Any) -> Any:
         # TODO: use llm_api from handle side

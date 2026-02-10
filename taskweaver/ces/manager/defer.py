@@ -98,6 +98,10 @@ class DeferredClient(Client):
     ) -> str:
         return self._get_proxy_client().upload_file(filename, content)
 
+    def get_cwd(self) -> str:
+        """Get the working directory for this session."""
+        return self._get_proxy_client().get_cwd()
+
     def _get_proxy_client(self) -> Client:
         return self._init_deferred_var()()
 

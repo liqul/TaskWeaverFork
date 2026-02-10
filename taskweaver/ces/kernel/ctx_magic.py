@@ -141,11 +141,13 @@ def load_ipython_extension(ipython: InteractiveShell):
         "TASKWEAVER_SESSION_DIR",
         os.path.realpath(os.getcwd()),
     )
+    cwd = os.environ.get("TASKWEAVER_CWD", os.path.join(session_dir, "cwd"))
 
     executor = Executor(
         env_id=env_id,
         session_id=session_id,
         session_dir=session_dir,
+        cwd=cwd,
     )
 
     ctx_magic = TaskWeaverContextMagic(ipython, executor)

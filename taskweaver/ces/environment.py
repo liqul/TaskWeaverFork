@@ -217,6 +217,7 @@ class Environment:
                     "TASKWEAVER_ENV_ID": self.id,
                     "TASKWEAVER_SESSION_ID": session.session_id,
                     "TASKWEAVER_SESSION_DIR": session.session_dir,
+                    "TASKWEAVER_CWD": cwd,
                     "TASKWEAVER_LOGGING_FILE_PATH": os.path.join(
                         ces_session_dir,
                         "kernel_logging.log",

@@ -128,12 +128,13 @@ class ExecutionClient(Client):
             return
 
         try:
+            body: Dict[str, Any] = {"session_id": self.session_id}
+            if self.cwd is not None:
+                body["cwd"] = self.cwd
+
             response = self._client.post(
                 "/api/v1/sessions",
-                json={
-                    "session_id": self.session_id,
-                    "cwd": self.cwd,
-                },
+                json=body,
             )
             result = self._handle_response(response)
             self.cwd = result.get("cwd", self.cwd)
@@ -461,6 +462,14 @@ class ExecutionClient(Client):
         result = self._handle_response(response)
         logger.info(f"Uploaded file {filename} to session {self.session_id}")
         return result.get("path", "")
+
+    def get_cwd(self) -> str:
+        """Get the working directory for this session.
+
+        Returns:
+            The working directory path on the server.
+        """
+        return self.cwd or ""
 
     def close(self) -> None:
         """Close the HTTP client and release resources."""

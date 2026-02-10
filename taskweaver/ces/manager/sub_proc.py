@@ -79,6 +79,10 @@ class SubProcessClient(Client):
 
         return file_path
 
+    def get_cwd(self) -> str:
+        """Get the working directory for this session."""
+        return self.cwd
+
 
 class SubProcessManager(Manager):
     def __init__(

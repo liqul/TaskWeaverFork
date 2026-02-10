@@ -1,129 +1,137 @@
+import json
 import os
 import shutil
 import subprocess
 import sys
 import warnings
-from typing import Optional, Tuple
+from typing import Any, Dict, Optional, Tuple, Union
 
 sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 
 warnings.filterwarnings("ignore")
 
 import pandas as pd
-from evaluator import Evaluator, ScoringPoint, VirtualUser
+from openai import AzureOpenAI, OpenAI
+
+from judge import Judge, ScoringPoint
+from tester import Tester
 from utils import check_package_version, load_task_case
 
 from taskweaver.app.app import TaskWeaverApp
 from taskweaver.llm import LLMApi
 
 
-def _get_llm_client_from_app(app: TaskWeaverApp):
-    """Extract the OpenAI client and model name from a TaskWeaverApp instance."""
+def _make_app_key(app_dir: str, config_var: Optional[Dict]) -> str:
+    """Create a hashable key for caching TaskWeaverApp instances."""
+    normalized_dir = os.path.abspath(app_dir)
+    config_str = json.dumps(config_var or {}, sort_keys=True)
+    return f"{normalized_dir}|{config_str}"
+
+
+def _get_llm_client(app: TaskWeaverApp) -> Tuple[Union[OpenAI, AzureOpenAI], str]:
+    """Extract the LLM client and model name from a TaskWeaverApp."""
     llm_api = app.app_injector.get(LLMApi)
     service = llm_api.completion_service
     return service.client, service.config.model
 
 
-class TaskWeaverVirtualUser(VirtualUser):
-    def __init__(self, task_description: str, app_dir: str, config_var: Optional[dict] = None):
-        self.app = TaskWeaverApp(app_dir=app_dir, config=config_var)
-        self.session = self.app.get_session()
-        self.session_id = self.session.session_id
-
-        llm_client, model_name = _get_llm_client_from_app(self.app)
-        super().__init__(task_description, llm_client, model_name)
-
-    def get_reply_from_agent(self, message: str, verbose: bool = False) -> str:
-        response_round = self.session.send_message(
-            message,
-            event_handler=None,
-        )
-        assert response_round.state != "failed", "Failed to get response from agent."
-        if verbose:
-            verbose_response = "\n Below are conversation details inside the Agent: \n"
-            for post in response_round.post_list:
-                message = f"{post.send_from} -> {post.send_to}: {post.message}"
-                verbose_response += f"{message}\n"
-                # uncomment the following code block if you want to see the attachments during the evaluation
-                # for atta in post.attachment_list:
-                #     atta_type = atta.type.value
-                #     atta_content = atta.content
-                #     if atta_type in  ["plan", "current_plan_step", "thought", "python",
-                # "execution_status", "execution_result"]:
-                #         atta_message = f"# {atta_type}: {atta_content}"
-                #         verbose_response += f"  {atta_message}\n"
-            return verbose_response
-        return response_round.post_list[-1].message
-
-    def close(self):
-        self.app.stop()
-
-
-def auto_evaluate_for_taskweaver(
+def auto_evaluate(
     eval_case_dir: str,
+    app: Optional[TaskWeaverApp] = None,
+    llm_client: Optional[Union[OpenAI, AzureOpenAI]] = None,
+    model_name: Optional[str] = None,
 ) -> Tuple[float, float]:
-    eval_meta_data = load_task_case(eval_case_dir)
+    """Run a single evaluation case.
 
-    app_dir = eval_meta_data["app_dir"]
-    config_var = eval_meta_data.get("config_var", None)
-    task_description = eval_meta_data["task_description"]
-    dependencies = eval_meta_data.get("dependencies", [])
-    data_files = eval_meta_data.get("data_files", [])
-    pre_command = eval_meta_data.get("pre_command", [])
-    verbose = eval_meta_data.get("verbose", False)
+    Args:
+        eval_case_dir: Path to the case directory.
+        app: Optional pre-created TaskWeaverApp to reuse (avoids re-auth).
+        llm_client: Optional shared LLM client for tester/judge calls.
+        model_name: Optional model name for the shared LLM client.
+    """
+    case = load_task_case(eval_case_dir)
 
-    for dependency in dependencies:
-        check_package_version(dependency)
+    app_dir = case["app_dir"]
+    config_var = case.get("config_var", None)
+    task_description = case["task_description"]
+    dependencies = case.get("dependencies", [])
+    data_files = case.get("data_files", [])
+    pre_command = case.get("pre_command", [])
+    max_rounds = case.get("max_rounds", 10)
+
+    for dep in dependencies:
+        check_package_version(dep)
 
     for command in pre_command:
-        # run the command
-        # subprocess.run(command, shell=True)
-        result = subprocess.run(command, shell=True, text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-        # result = subprocess.check_output(command.split(" "), stderr=subprocess.STDOUT)
+        result = subprocess.run(
+            command,
+            shell=True,
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+        )
         if result.returncode == 0:
-            print("Precommand executed successfully")
+            print(f"Pre-command executed successfully: {command}")
             print(result.stdout)
         else:
-            print("Command failed")
-            print(result.stderr)
+            print(f"Pre-command failed: {command}")
+            print(result.stdout)
 
-    taskweaver_vuser = TaskWeaverVirtualUser(task_description, app_dir, config_var)
-    taskweaver_evaluator = Evaluator(taskweaver_vuser.llm_client, taskweaver_vuser.model_name)
-
-    working_directory = os.path.join(app_dir, "workspace", "sessions", taskweaver_vuser.session_id, "cwd")
-
-    for data_file in data_files:
-        if not os.path.exists(os.path.join(eval_case_dir, data_file)):
-            raise FileNotFoundError(f"Data file {data_file} is not found.")
-        else:
-            file_path = os.path.join(eval_case_dir, data_file)
-            if os.path.isfile(file_path):
-                shutil.copy(file_path, working_directory)
-            else:
-                shutil.copytree(file_path, os.path.join(working_directory, data_file))
-
-    chat_history = taskweaver_vuser.talk_with_agent(verbose=verbose)
-
-    score_points = eval_meta_data["scoring_points"]
-    score_points = [ScoringPoint(**score_point) for score_point in score_points]
-    score, normalized_score = taskweaver_evaluator.evaluate(
-        task_description,
-        chat_history,
-        score_points,
-        working_directory,
+    tester = Tester(
+        task_description=task_description,
+        app_dir=app_dir,
+        config_var=config_var,
+        max_rounds=max_rounds,
+        app=app,
+        llm_client=llm_client,
+        model_name=model_name,
     )
 
-    taskweaver_vuser.close()
+    # Ensure CES session is started and get the actual working directory
+    working_directory = tester.session.ensure_execution_ready()
+    for data_file in data_files:
+        src = os.path.join(eval_case_dir, data_file)
+        if not os.path.exists(src):
+            raise FileNotFoundError(f"Data file {data_file} not found in {eval_case_dir}")
+        if os.path.isfile(src):
+            shutil.copy(src, working_directory)
+        else:
+            shutil.copytree(src, os.path.join(working_directory, data_file))
+
+    conversation = tester.run()
+
+    judge_client = llm_client or tester.llm_client
+    judge_model = model_name or tester.model_name
+    judge = Judge(judge_client, judge_model)
+    scoring_points = [
+        ScoringPoint(score_point=sp["score_point"], weight=sp["weight"])
+        for sp in case["scoring_points"]
+    ]
+    score, normalized_score, results = judge.evaluate(
+        task_description,
+        conversation,
+        scoring_points,
+    )
+
+    tester.close()
+
+    max_score = sum(sp.weight for sp in scoring_points)
+    print(f"\nFinal Score: {score}/{max_score} (normalized: {normalized_score:.2%})")
 
     return score, normalized_score
 
 
-def batch_auto_evaluate_for_taskweaver(
+def batch_auto_evaluate(
     result_file_path: str,
     eval_case_root: str,
     flush_result_file: bool = False,
     sleep_time: int = 0,
 ):
+    """Run all evaluation cases in a directory.
+
+    Creates and caches TaskWeaverApp instances by (app_dir, config_var) so that
+    authentication only happens once per unique configuration.
+    """
     if not os.path.exists(result_file_path):
         df = pd.DataFrame(columns=["case_file", "score", "normalized_score"])
         df.to_csv(result_file_path, index=False)
@@ -134,89 +142,126 @@ def batch_auto_evaluate_for_taskweaver(
         evaluated_case_files = []
     print(f"Evaluated case files: {evaluated_case_files}")
     eval_config_dirs = os.listdir(eval_case_root)
-    print(f"Eval config files in case dir: {eval_config_dirs}")
+    print(f"Eval config dirs: {eval_config_dirs}")
 
-    for eval_case_dir in eval_config_dirs:
-        if eval_case_dir in evaluated_case_files:
-            print(f"Skip {eval_case_dir} because it has been evaluated.")
-            continue
-        print("------------Start evaluating------------", eval_case_dir)
-        eval_case_dir_path = os.path.join(eval_case_root, eval_case_dir)
+    app_cache: Dict[str, TaskWeaverApp] = {}
+    shared_llm_api: Optional[Any] = None
+    shared_llm_client: Optional[Union[OpenAI, AzureOpenAI]] = None
+    shared_model_name: Optional[str] = None
 
-        score, normalized_score = auto_evaluate_for_taskweaver(eval_case_dir_path)
-        new_res_row = pd.DataFrame(
-            {
-                "case_file": [eval_case_dir],
-                "score": [score],
-                "normalized_score": [normalized_score],
-            },
-        )
-        results = pd.concat([results, new_res_row], ignore_index=True)
+    try:
+        for eval_case_dir in eval_config_dirs:
+            if eval_case_dir in evaluated_case_files:
+                print(f"Skip {eval_case_dir} because it has been evaluated.")
+                continue
+            print("------------ Start evaluating ------------", eval_case_dir)
+            eval_case_dir_path = os.path.join(eval_case_root, eval_case_dir)
 
-        print("------------Finished evaluating------------", eval_case_dir)
+            try:
+                # Load case to determine app config for caching
+                case = load_task_case(eval_case_dir_path)
+                app_dir = case["app_dir"]
+                config_var = case.get("config_var", None)
+                app_key = _make_app_key(app_dir, config_var)
 
-        results.to_csv(result_file_path, index=False)
+                if app_key not in app_cache:
+                    print(f"Creating app for config: {app_key}")
+                    app_cache[app_key] = TaskWeaverApp(
+                        app_dir=app_dir,
+                        config=config_var,
+                        llm_api=shared_llm_api,
+                    )
 
-        if sleep_time > 0:
-            print(f"Sleeping for {sleep_time} seconds...")
-            import time
+                app = app_cache[app_key]
 
-            time.sleep(sleep_time)
+                # Extract shared LLM API and client from first app (auth happens once)
+                if shared_llm_api is None:
+                    shared_llm_api = app.app_injector.get(LLMApi)
+                    shared_llm_client, shared_model_name = _get_llm_client(app)
+
+                score, normalized_score = auto_evaluate(
+                    eval_case_dir_path,
+                    app=app,
+                    llm_client=shared_llm_client,
+                    model_name=shared_model_name,
+                )
+            except Exception as e:
+                print(f"Error evaluating {eval_case_dir}: {e}")
+                score, normalized_score = 0, 0
+
+            new_res_row = pd.DataFrame(
+                {
+                    "case_file": [eval_case_dir],
+                    "score": [score],
+                    "normalized_score": [normalized_score],
+                },
+            )
+            results = pd.concat([results, new_res_row], ignore_index=True)
+
+            print("------------ Finished evaluating ------------", eval_case_dir)
+
+            results.to_csv(result_file_path, index=False)
+
+            if sleep_time > 0:
+                print(f"Sleeping for {sleep_time} seconds...")
+                import time
+
+                time.sleep(sleep_time)
+    finally:
+        # Clean up all cached apps
+        for app in app_cache.values():
+            try:
+                app.stop()
+            except Exception:
+                pass
 
 
 if __name__ == "__main__":
     import argparse
 
-    parser = argparse.ArgumentParser(description="Taskweaver auto evaluation script")
+    parser = argparse.ArgumentParser(description="TaskWeaver auto evaluation script")
     parser.add_argument(
         "-m",
         "--mode",
         choices=["single", "batch"],
         required=True,
-        help="Evaluation mode, single for evaluating a single case, " "batch for evaluating a batch of cases",
+        help="Evaluation mode: single case or batch of cases",
     )
     parser.add_argument(
         "-p",
         "--path",
         type=str,
         required=True,
-        help="Path to the evaluation case file or directory containing evaluation case files",
+        help="Path to the evaluation case directory (single) or parent directory (batch)",
     )
     parser.add_argument(
         "-r",
         "--result",
         type=str,
         default="sample_case_results.csv",
-        help="Path to the result file for batch evaluation mode",
-    )
-    parser.add_argument(
-        "-t",
-        "--threshold",
-        type=float,
-        default=None,
-        help="Interrupt threshold for multi-round chat",
+        help="Path to the result CSV file (batch mode only)",
     )
     parser.add_argument(
         "-f",
         "--fresh",
         action="store_true",
-        help="Flush the result file",
+        help="Re-evaluate all cases, ignoring previous results",
     )
     parser.add_argument(
         "-s",
         "--sleep",
         type=int,
         default=0,
-        help="Sleep time between evaluations",
+        help="Sleep time in seconds between evaluations (batch mode)",
     )
 
     args = parser.parse_args()
 
     if args.mode == "single":
-        score, normalized_score = auto_evaluate_for_taskweaver(args.path)
+        score, normalized_score = auto_evaluate(args.path)
         print(f"Score: {score}, Normalized score: {normalized_score}")
     elif args.mode == "batch":
-        batch_auto_evaluate_for_taskweaver(
+        batch_auto_evaluate(
             args.result,
             args.path,
             flush_result_file=args.fresh,

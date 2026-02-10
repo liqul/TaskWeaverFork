@@ -5,11 +5,12 @@ config_var:
   planner.prompt_compression: true
   code_generator.prompt_compression: true
 app_dir: ../project/
+max_rounds: 55
 task_description: |-
-  The task has many rounds. The initial total sum is 0. 
-  Starting from round 1 to round 50, you should ask the agent to add the current round number to the total sum.
-  The agent should keep track of the sum and return the sum after the 50th round.
-  Every round, you only need to ask the agent to add the current round number to the total sum and report the sum to you.
+  We are going to do a running sum exercise. The total sum starts at 0.
+  I will ask you to add the current round number to the total sum, one round at a time, from round 1 to round 50.
+  After each round, report the current sum.
+  Let's begin: add 1 to the total.
 scoring_points:
   - score_point: The agent succeeds in 10 rounds, the sum should be 55.
     weight: 1

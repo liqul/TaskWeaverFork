@@ -88,12 +88,15 @@ class TaskWeaverApp(object):
         self,
         app_dir: Optional[str] = None,
         config: Optional[Dict[str, Any]] = None,
+        llm_api: Optional[Any] = None,
         **kwargs: Any,
     ) -> None:
         """
         Initialize the TaskWeaver app.
         :param app_dir: The project directory.
         :param config: The configuration.
+        :param llm_api: Optional pre-created LLMApi instance to reuse
+            (avoids re-authentication when creating multiple apps).
         :param kwargs: The additional arguments.
         """
 
@@ -113,6 +116,12 @@ class TaskWeaverApp(object):
             [SessionManagerModule, PluginModule, LoggingModule, ExecutionServiceModule, RoleModule],
         )
         self.app_injector.binder.bind(AppConfigSource, to=config_src)
+
+        if llm_api is not None:
+            from taskweaver.llm import LLMApi
+
+            self.app_injector.binder.bind(LLMApi, to=llm_api)
+
         self.session_manager: SessionManager = self.app_injector.get(SessionManager)
         self._init_app_modules()
 

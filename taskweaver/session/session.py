@@ -130,13 +130,12 @@ class Session:
 
     def _init(self):
         """
-        Initialize the session by creating the workspace and execution cwd.
+        Initialize the session by creating the workspace directory.
+        The execution cwd is managed by the CES and will be set when
+        the CES session starts.
         """
         if not os.path.exists(self.workspace):
             os.makedirs(self.workspace)
-
-        if not os.path.exists(self.execution_cwd):
-            os.makedirs(self.execution_cwd)
 
         if not os.path.exists(self.config.experience_dir):
             os.makedirs(self.config.experience_dir)
@@ -322,12 +321,12 @@ class Session:
         """Get or create the upload client for file uploads.
 
         Lazily creates and starts the client on first use.
+        After starting, updates execution_cwd from the CES response.
         """
         if not hasattr(self, "_upload_client"):
             self._upload_client = self.exec_mgr.get_session_client(
                 self.session_id,
                 session_dir=self.workspace,
-                cwd=self.execution_cwd,
             )
             self._upload_client_started = False
 
@@ -335,7 +334,25 @@ class Session:
             self._upload_client.start()
             self._upload_client_started = True
 
+            # Update execution_cwd from the CES-assigned cwd
+            ces_cwd = self._upload_client.get_cwd()
+            if ces_cwd:
+                self.execution_cwd = ces_cwd
+                self.metadata.execution_cwd = ces_cwd
+
         return self._upload_client
+
+    def ensure_execution_ready(self) -> str:
+        """Ensure the CES session is started and return the execution cwd.
+
+        This triggers the CES session creation (if not already started) and
+        updates self.execution_cwd with the server-assigned working directory.
+
+        Returns:
+            The execution working directory path.
+        """
+        self._get_upload_client()
+        return self.execution_cwd
 
     @tracing_decorator
     def _upload_file(self, name: str, path: Optional[str] = None, content: Optional[bytes] = None) -> str:

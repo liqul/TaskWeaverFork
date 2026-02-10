@@ -137,10 +137,17 @@ class RuntimePlugin(EnvPlugin):
 
 
 class Executor:
-    def __init__(self, env_id: str, session_id: str, session_dir: str) -> None:
+    def __init__(
+        self,
+        env_id: str,
+        session_id: str,
+        session_dir: str,
+        cwd: Optional[str] = None,
+    ) -> None:
         self.env_id: str = env_id
         self.session_id: str = session_id
         self.session_dir: str = session_dir
+        self.cwd: str = cwd or os.path.join(session_dir, "cwd")
 
         # Session var management
         self.session_var: Dict[str, str] = {}
@@ -158,6 +165,8 @@ class Executor:
     def _init_session_dir(self):
         if not os.path.exists(self.session_dir):
             os.makedirs(self.session_dir)
+        if not os.path.exists(self.cwd):
+            os.makedirs(self.cwd)
 
     def pre_execution(self, exec_idx: int, exec_id: str):
         self.cur_execution_count = exec_idx

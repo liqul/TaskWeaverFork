@@ -119,6 +119,15 @@ class Client(ABC):
     ) -> str:
         ...
 
+    @abstractmethod
+    def get_cwd(self) -> str:
+        """Get the working directory for this session.
+
+        Returns:
+            The working directory path on the execution side.
+        """
+        ...
+
 
 KernelModeType = Literal["local", "container"]
 

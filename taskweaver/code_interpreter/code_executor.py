@@ -165,6 +165,10 @@ class CodeExecutor:
         if not self.client_started:
             self.exec_client.start()
             self.client_started = True
+            # Update execution_cwd from the CES-assigned cwd
+            ces_cwd = self.exec_client.get_cwd()
+            if ces_cwd:
+                self.execution_cwd = ces_cwd
 
     def stop(self):
         self.exec_client.stop()

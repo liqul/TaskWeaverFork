@@ -117,6 +117,12 @@ class ExecutionServiceClient(Client):
             raise RuntimeError("Client not started")
         return self._client.upload_file(filename, content)
 
+    def get_cwd(self) -> str:
+        """Get the working directory for this session."""
+        if self._client is None:
+            raise RuntimeError("Client not started")
+        return self._client.get_cwd()
+
 
 class ExecutionServiceProvider(Manager):
     """Manager implementation that uses the HTTP execution server.
@@ -223,15 +229,14 @@ class ExecutionServiceProvider(Manager):
         if not self._initialized:
             self.initialize()
 
-        # Use session_dir as cwd if cwd not specified
-        effective_cwd = cwd or session_dir
-
+        # Don't pass cwd to server — let the server decide its own cwd.
+        # The client will read the server-assigned cwd from the start() response.
         return ExecutionServiceClient(
             session_id=session_id,
             server_url=self.server_url,
             api_key=self.api_key,
             timeout=self.timeout,
-            cwd=effective_cwd,
+            cwd=None,
         )
 
     def get_kernel_mode(self) -> KernelModeType:
